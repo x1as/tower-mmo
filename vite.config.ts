@@ -9,7 +9,7 @@ export default defineConfig({
   base: `/${repoName}/`,
   resolve: {
     alias: {
-      '@tower/shared': path.resolve(__dirname, '../../packages/shared/src'),
+      '@tower/shared': path.resolve(__dirname, 'src/shared'),
     },
   },
   build: {

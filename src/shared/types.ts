@@ -25,7 +25,7 @@ export interface TowerState {
   gridX: number;
   gridY: number;
   tier: number;
-  augments: AppliedAugment[];  // up to 10 slots
+  augments: AppliedAugment[];
 }
 
 export interface AppliedAugment {
@@ -39,14 +39,14 @@ export interface AugmentDef {
   kind: AugmentKind;
   name: string;
   description: string;
-  icon: string;          // sprite key prefix
-  particleColor: string; // hex
+  icon: string;
+  particleColor: string;
   effects: Record<LootRarity, AugmentEffect>;
 }
 
 export interface AugmentEffect {
-  label: string;         // e.g. "+30% damage"
-  damageMul?: number;    // multiplier added (0.15 = +15%)
+  label: string;
+  damageMul?: number;
   speedMul?: number;
   rangeMul?: number;
   chainCount?: number;
@@ -58,8 +58,6 @@ export interface AugmentEffect {
   trueDamagePct?: number;
   critChance?: number;
 }
-
-// ─── Augment Drop ───
 
 export interface AugmentItem {
   kind: AugmentKind;
@@ -85,16 +83,16 @@ export interface LootDrop {
 // ─── Enemy ───
 
 export interface EnemyResistance {
-  splashReduction?: number;   // 0-1, reduces splash damage
-  slowImmune?: boolean;       // immune to slow
-  beamReduction?: number;     // 0-1, reduces beam damage
-  dodgeChance?: number;       // 0-1, dodge projectile attacks
-  chainImmune?: boolean;      // immune to chain/tesla
-  fireImmune?: boolean;       // immune to burn DOT
-  dotImmune?: boolean;        // immune to all DOT
-  homingImmune?: boolean;     // missiles can't track
-  armorRegen?: number;        // armor/sec regen
-  dotCleanse?: boolean;       // cleanses nearby ally DOTs
+  splashReduction?: number;
+  slowImmune?: boolean;
+  beamReduction?: number;
+  dodgeChance?: number;
+  chainImmune?: boolean;
+  fireImmune?: boolean;
+  dotImmune?: boolean;
+  homingImmune?: boolean;
+  armorRegen?: number;
+  dotCleanse?: boolean;
 }
 
 export interface EnemyDef {
@@ -139,27 +137,4 @@ export interface GameUIState {
   autoRun: boolean;
   paused: boolean;
   towerTypeCounts: Record<string, number>;
-}
-
-// ─── Socket.IO Events ───
-
-export interface ServerToClientEvents {
-  game_state: (state: any) => void;
-  wave_start: (data: { waveNumber: number; enemies: Array<{ type: EnemyType; count: number }> }) => void;
-  wave_end: (data: { waveNumber: number; rewards: { gold: number } }) => void;
-  tower_placed: (data: TowerState) => void;
-  loot_drop: (data: LootDrop) => void;
-  base_damage: (data: { currentHP: number; damage: number }) => void;
-  game_over: (data: { result: 'win' | 'lose'; wave: number }) => void;
-  build_phase: (data: { duration: number }) => void;
-}
-
-export interface ClientToServerEvents {
-  join_game: (data: { gameId: string }) => void;
-  tower_place: (data: { towerType: TowerType; gridX: number; gridY: number }) => void;
-  tower_upgrade: (data: { towerId: string }) => void;
-  tower_sell: (data: { towerId: string }) => void;
-  loot_pickup: (data: { itemId: string }) => void;
-  start_wave: () => void;
-  apply_augment: (data: { towerId: string; instanceId: string }) => void;
 }

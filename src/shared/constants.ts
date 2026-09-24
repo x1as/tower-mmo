@@ -9,30 +9,26 @@ export const MAP_ROWS = 14;
 
 export const GAME_W = 2048;
 export const GAME_H = 1152;
-/** @deprecated use GAME_W / GAME_H */
 export const MAP_WIDTH = GAME_W;
-/** @deprecated use GAME_W / GAME_H */
 export const MAP_HEIGHT = GAME_H;
-export const HUD_TOP_H = 64;          // header bar height (px at game resolution)
-export const HUD_BOT_H = 120;         // footer bar height
+export const HUD_TOP_H = 64;
+export const HUD_BOT_H = 120;
 export const MAP_ORIGIN_X = GAME_W / 2;
-export const MAP_ORIGIN_Y = 120;      // vertical offset for map top
+export const MAP_ORIGIN_Y = 120;
 
 // ─── Isometric Tile ───
 
-export const ISO_TILE_W = 128;        // diamond width on screen (2:1 isometric ratio)
-export const ISO_TILE_H = 64;         // diamond height on screen
-export const ISO_W_HALF = ISO_TILE_W / 2;  // 64
-export const ISO_H_HALF = 29;              // row height gap (lower = tighter vertical fit)
-export const ISO_TILE_DEPTH = 55;     // visible cube side height
-export const ISO_TILE_SCREEN_DIST = 72; // pixel distance between adjacent tile centers
-export const TILE_SIZE = ISO_TILE_W;   // alias for range calculations
+export const ISO_TILE_W = 128;
+export const ISO_TILE_H = 64;
+export const ISO_W_HALF = ISO_TILE_W / 2;
+export const ISO_H_HALF = 29;
+export const ISO_TILE_DEPTH = 55;
+export const ISO_TILE_SCREEN_DIST = 72;
+export const TILE_SIZE = ISO_TILE_W;
 
-// Tile elevation (pixels per height level, for height map system)
-// To add elevation: subtract TILE_HEIGHT_STEP * height from tile Y in tileToWorld()
 export const TILE_HEIGHT_STEP = 16;
 
-// ─── Sprite Dimensions (BootScene compositing) ───
+// ─── Sprite Dimensions ───
 
 export const TOWER_SPRITE_W = 96;
 export const TOWER_SPRITE_H = 150;
@@ -40,39 +36,26 @@ export const SRC_BOTTOM_W = 749;
 export const SRC_BOTTOM_H = 711;
 export const SRC_TOP_W = 752;
 export const SRC_TOP_H = 700;
-export const SCALED_TILE_W = 130;      // 128 + 2px overlap each edge
-export const SCALED_TILE_H = 66;       // diamond-only height (flat top face)
-export const SCALED_TILE_FULL_H = 99;  // diamond (66) + cube walls (33)
-export const FULL_TILE_H = 96;         // source intermediate height (diamond 64 + walls 32)
+export const SCALED_TILE_W = 130;
+export const SCALED_TILE_H = 66;
+export const SCALED_TILE_FULL_H = 99;
+export const FULL_TILE_H = 96;
 export const TREE_W = 40;
 export const TREE_H = 80;
 export const STONE_W = 30;
 export const STONE_H = 30;
 export const ENEMY_SPRITE_SIZE = 48;
 
-// ─── Depth Layers (isometric z-sorting) ───
-// Three separate bands so enemies are always above ground but below structures.
-// Band 1 — Ground:     (col+row)*10 + offset        → range 0..302
-// Band 2 — Enemies:    ENEMY_BAND + continuous Y     → range 400..700
-// Band 3 — Structures: STRUCT_BAND + (col+row)*10    → range 800..1102
-// Band 4 — UI:         fixed values                  → 1200+
+// ─── Depth Layers ───
 
 export const DEPTH_PER_TILE    = 10;
-
-// Band 1: Ground (tile-sorted, range 0..~302)
 export const DEPTH_GROUND      = 0;
 export const DEPTH_STONE       = 2;
-
-// Band 2: Enemies (continuous Y-sorted, always above all ground)
 export const DEPTH_ENEMY_BAND  = 400;
-
-// Band 3: Structures (tile-sorted, always above all enemies)
 export const DEPTH_STRUCT_BAND = 800;
-export const DEPTH_TREE        = 0;   // offsets within structure band
+export const DEPTH_TREE        = 0;
 export const DEPTH_TOWER       = 4;
 export const DEPTH_SELECT      = 6;
-
-// Band 4: Fixed UI depths (above all tile content)
 export const DEPTH_HOVER       = 1200;
 export const DEPTH_RANGE       = 1250;
 export const DEPTH_PLACEMENT   = 1300;
@@ -110,24 +93,19 @@ export const CRAFT_RECIPES: Array<{ inputRarity: string; inputCount: number; out
 // ─── 24-Color Palette ───
 
 export const PALETTE = {
-  // Grass (3)
   grassDark:    '#2d5a2d',
   grassMid:     '#3b7a3b',
   grassLight:   '#56a356',
-  // Path (3)
   pathDark:     '#5b381f',
   pathMid:      '#7a4b2c',
   pathLight:    '#9a6b44',
-  // Stone (3)
   stoneDark:    '#3a3a48',
   stoneMid:     '#4a4a5a',
   stoneLight:   '#6a6a7a',
-  // UI (4)
   uiBg:         '#0f1220',
   uiPanel:      '#1b1f2a',
   uiPanelLight: '#2a3040',
   uiBorder:     '#f0b23a',
-  // Game colors (8)
   cannon:       '#e05555',
   frost:        '#4fb3ff',
   frostHi:      '#9fe7ff',
@@ -137,10 +115,8 @@ export const PALETTE = {
   flame:        '#ff8844',
   poison:       '#44aa44',
   missile:      '#8a8a9a',
-  // Gold
   gold:         '#f0b23a',
   goldDark:     '#d49520',
-  // Enemies
   scatterImp:   '#ff8833',
   thermalDrake: '#e05533',
   mirrorWisp:   '#bb66ee',
@@ -150,12 +126,10 @@ export const PALETTE = {
   pureSpirit:   '#aaeebb',
   ironShell:    '#8a8a9a',
   boss:         '#cc3333',
-  // Rarities
   common:       '#8a8a9a',
   rare:         '#4fb3ff',
   epic:         '#aa55dd',
   legendary:    '#f0b23a',
-  // Augments
   powerCrystal: '#e05555',
   swiftGem:     '#ffd14d',
   farSightLens: '#4fb3ff',
@@ -164,7 +138,6 @@ export const PALETTE = {
   emberCore:    '#ff8844',
   voidStone:    '#aa55dd',
   luckyCoin:    '#f0b23a',
-  // HP
   hpGreen:      '#55cc55',
   hpRed:        '#e05555',
 } as const;
@@ -217,25 +190,20 @@ export const AUGMENT_KINDS_ORDERED = [
 ] as const;
 
 // ─── Loot Table ───
-// Balanced: commons frequent, rares uncommon, epics/legendaries exciting finds
 
 export const LOOT_TABLE: AugmentItem[] = [
-  // Common (weight 45 each — ~80% of drops)
   { kind: 'power_crystal',  rarity: 'common', weight: 45, minStage: 0 }, { kind: 'swift_gem',      rarity: 'common', weight: 45, minStage: 0 },
   { kind: 'far_sight_lens', rarity: 'common', weight: 45, minStage: 0 }, { kind: 'chain_link',     rarity: 'common', weight: 45, minStage: 0 },
   { kind: 'frost_shard',    rarity: 'common', weight: 45, minStage: 0 }, { kind: 'ember_core',     rarity: 'common', weight: 45, minStage: 0 },
   { kind: 'void_stone',     rarity: 'common', weight: 45, minStage: 0 }, { kind: 'lucky_coin',     rarity: 'common', weight: 45, minStage: 0 },
-  // Rare (weight 8 each — ~14% of drops, unlocks stage 1 / wave 11+)
   { kind: 'power_crystal',  rarity: 'rare', weight: 8, minStage: 1 }, { kind: 'swift_gem',      rarity: 'rare', weight: 8, minStage: 1 },
   { kind: 'far_sight_lens', rarity: 'rare', weight: 8, minStage: 1 }, { kind: 'chain_link',     rarity: 'rare', weight: 8, minStage: 1 },
   { kind: 'frost_shard',    rarity: 'rare', weight: 8, minStage: 1 }, { kind: 'ember_core',     rarity: 'rare', weight: 8, minStage: 1 },
   { kind: 'void_stone',     rarity: 'rare', weight: 8, minStage: 1 }, { kind: 'lucky_coin',     rarity: 'rare', weight: 8, minStage: 1 },
-  // Epic (weight 2 each — ~3.5% of drops, unlocks stage 2 / wave 21+)
   { kind: 'power_crystal',  rarity: 'epic', weight: 2, minStage: 2 }, { kind: 'swift_gem',      rarity: 'epic', weight: 2, minStage: 2 },
   { kind: 'far_sight_lens', rarity: 'epic', weight: 2, minStage: 2 }, { kind: 'chain_link',     rarity: 'epic', weight: 2, minStage: 2 },
   { kind: 'frost_shard',    rarity: 'epic', weight: 2, minStage: 2 }, { kind: 'ember_core',     rarity: 'epic', weight: 2, minStage: 2 },
   { kind: 'void_stone',     rarity: 'epic', weight: 2, minStage: 2 }, { kind: 'lucky_coin',     rarity: 'epic', weight: 2, minStage: 2 },
-  // Legendary (weight 1 each — ~1.8% of drops, unlocks stage 3 / wave 31+)
   { kind: 'power_crystal',  rarity: 'legendary', weight: 1, minStage: 3 }, { kind: 'swift_gem',      rarity: 'legendary', weight: 1, minStage: 3 },
   { kind: 'far_sight_lens', rarity: 'legendary', weight: 1, minStage: 3 }, { kind: 'chain_link',     rarity: 'legendary', weight: 1, minStage: 3 },
   { kind: 'frost_shard',    rarity: 'legendary', weight: 1, minStage: 3 }, { kind: 'ember_core',     rarity: 'legendary', weight: 1, minStage: 3 },
@@ -253,17 +221,13 @@ export function getWaveConfig(waveNumber: number): WaveConfig {
   return { waveNumber, stage, isBoss, baseCount, hpScale, speedScale };
 }
 
-// ─── Map Path (random snake on 16×16 grid) ───
-// Each page load generates a new random snake path.
-// Rules: alternate east/west horizontal runs with short south turns.
-// Orthogonal steps only (±1 col or ±1 row per step).
+// ─── Map Path ───
 
 function generateSnakePath(): [number, number][] {
   const path: [number, number][] = [];
   const randInt = (min: number, max: number) =>
     min + Math.floor(Math.random() * (max - min + 1));
 
-  // Start near top-left
   let col = randInt(0, 2);
   let row = randInt(1, 2);
   let goingEast = true;
@@ -271,10 +235,9 @@ function generateSnakePath(): [number, number][] {
   path.push([col, row]);
 
   while (row < MAP_ROWS - 2) {
-    // Horizontal run across most of the grid
     const targetCol = goingEast
-      ? randInt(MAP_COLS - 3, MAP_COLS - 1)   // far right (13-15)
-      : randInt(0, 2);                         // far left  (0-2)
+      ? randInt(MAP_COLS - 3, MAP_COLS - 1)
+      : randInt(0, 2);
 
     const step = goingEast ? 1 : -1;
     while (col !== targetCol) {
@@ -282,7 +245,6 @@ function generateSnakePath(): [number, number][] {
       path.push([col, row]);
     }
 
-    // South turn (2-3 tiles, capped by grid bottom)
     const remaining = MAP_ROWS - 1 - row;
     if (remaining <= 0) break;
     const turnLen = Math.min(randInt(2, 3), remaining);

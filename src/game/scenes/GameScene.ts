@@ -758,7 +758,7 @@ export class GameScene extends Phaser.Scene {
       frequency: 300,
       quantity: 1,
       emitZone: { type: 'random', source: new Phaser.Geom.Circle(0, 0, 20), quantity: 1 },
-      ...(hasAnim ? { anim: { key: `particle_${kind}_anim`, cycle: true } } : {}),
+      ...(hasAnim ? { anim: `particle_${kind}_anim` } : {}),
     }).setDepth(DEPTH_PARTICLE);
     tower.particleEmitters.set(kind, emitter);
   }

@@ -1,8 +1,0 @@
-{
-    "compilerOptions": {
-      "baseUrl": ".",
-      "paths": {
-        "@tower/shared": ["packages/shared/src"]
-      }
-    }
-  }
