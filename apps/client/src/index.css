@@ -1,0 +1,39 @@
+@font-face {
+  font-family: 'Minecraft';
+  src: url('/font/minecraft.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: block;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #91db68;
+  font-family: 'Minecraft', monospace;
+}
+
+canvas {
+  image-rendering: auto;
+  display: block;
+}
+
+.app-root {
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+button {
+  transition: all 0.15s ease;
+}
+
+button:active {
+  transform: scale(0.95);
+}

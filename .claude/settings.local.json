@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(pnpm add:*)",
+      "Bash(pnpm build:*)",
+      "Bash(npx vite:*)",
+      "Bash(pnpm run:*)",
+      "Bash(pnpm:*)",
+      "Bash(npx tsc:*)",
+      "Bash(docker ps:*)",
+      "Bash(docker compose:*)",
+      "Bash(sudo lsof:*)",
+      "Bash(docker exec:*)",
+      "Bash(identify:*)",
+      "Bash(python3:*)",
+      "Bash(ls:*)",
+      "Bash(node:*)"
+    ]
+  }
+}

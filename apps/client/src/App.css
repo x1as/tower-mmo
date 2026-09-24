@@ -1,0 +1,27 @@
+.app-root {
+  width: 100vw;
+  height: 100vh;
+  background: #91db68;
+  overflow: hidden;
+  position: relative;
+  font-family: 'Minecraft', monospace;
+}
+
+/* ─── Scrollbar ─── */
+
+::-webkit-scrollbar {
+  width: 5px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a15;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #2a3040;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4a5060;
+}
