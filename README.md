@@ -1,5 +1,7 @@
 <p align="center"><img src="docs/screenshots/01.png" alt="Tower MMO: волна идёт по изометрической карте" width="100%"></p>
 
+<p align="center"><img src="public/icon-192.png" alt="" width="72"></p>
+
 <h1 align="center">Tower MMO</h1>
 
 <p align="center">
