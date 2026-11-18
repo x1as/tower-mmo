@@ -3,9 +3,13 @@ import Phaser from 'phaser';
 import { GameCanvas } from './components/GameCanvas';
 import { GameHUD } from './components/GameHUD';
 import { Inventory } from './components/Inventory';
+import { ForgeSidebar } from './components/ForgeSidebar';
+import { ShopSidebar } from './components/ShopSidebar';
 import { PauseMenu } from './components/PauseMenu';
+import type { SidebarPanel } from './components/SidebarUtils';
 import { TOWERS, SELL_REFUND_RATE, STARTING_GOLD, CHEST_PRICES, CRAFT_RECIPES, rollRandomKind } from '@tower/shared';
-import type { GameUIState, LootRarity, AugmentKind } from '@tower/shared';
+import type { GameUIState, LootRarity, AugmentKind, InventoryItem } from '@tower/shared';
+import type { GameScene } from './game/scenes/GameScene';
 import './App.css';
 
 const defaultState: GameUIState = {
@@ -13,11 +17,12 @@ const defaultState: GameUIState = {
   enemyCount: 0, gameStage: 0, towerCount: 0, inventory: [],
   selectedTowerId: null, selectedTower: null, selectedTowerDef: null,
   selectedTowerType: null, autoRun: false, paused: false, towerTypeCounts: {},
+  pendingAugmentInstanceId: null, availableAugmentTowerCount: 0,
 };
 
 function App() {
   const [state, setState] = useState<GameUIState>(defaultState);
-  const [invOpen, setInvOpen] = useState(false);
+  const [sidebar, setSidebar] = useState<SidebarPanel | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const [gameInstance, setGameInstance] = useState<Phaser.Game | null>(null);
   const gameRef = useRef<Phaser.Game | null>(null);
@@ -26,14 +31,15 @@ function App() {
     gameRef.current = game;
     setGameInstance(game);
 
-    // Global game events for inventory toggle
-    game.events.on('toggle_inventory', () => setInvOpen(prev => !prev));
-    // Auto-open inventory when tower is selected
-    game.events.on('open_inventory', () => setInvOpen(true));
-    // Close inventory when clicking empty ground
-    game.events.on('close_inventory', () => setInvOpen(false));
+    // Global game events for sidebars
+    game.events.on('toggle_inventory', () => setSidebar((current) => current === 'inventory' ? null : 'inventory'));
+    game.events.on('open_inventory', () => setSidebar('inventory'));
+    game.events.on('open_shop', () => setSidebar('shop'));
+    game.events.on('open_forge', () => setSidebar('forge'));
+    game.events.on('close_sidebar', () => setSidebar(null));
+    game.events.on('close_inventory', () => setSidebar(null));
     const tryConnect = () => {
-      const gs = game.scene.getScene('GameScene');
+      const gs = game.scene.getScene('GameScene') as GameScene | undefined;
       if (gs) {
         gs.events.on('state_update', (s: GameUIState) => setState({ ...s }));
       }
@@ -50,7 +56,7 @@ function App() {
       }
       if (e.key === ' ') {
         e.preventDefault();
-        const gs = gameRef.current?.scene.getScene('GameScene') as any;
+        const gs = gameRef.current?.scene.getScene('GameScene') as GameScene | undefined;
         if (!gs) return;
         if (gs.phase === 'build' || gs.phase === 'wave_end') {
           gs.startWave();
@@ -70,7 +76,7 @@ function App() {
   }, []);
 
   const handlePause = useCallback(() => {
-    const gs = gameRef.current?.scene.getScene('GameScene') as any;
+    const gs = gameRef.current?.scene.getScene('GameScene') as GameScene | undefined;
     if (!gs || gs.phase !== 'combat') return;
     gs.paused = true;
     gameRef.current!.scene.pause('GameScene');
@@ -78,7 +84,7 @@ function App() {
   }, []);
 
   const handleResume = useCallback(() => {
-    const gs = gameRef.current?.scene.getScene('GameScene') as any;
+    const gs = gameRef.current?.scene.getScene('GameScene') as GameScene | undefined;
     if (!gs) return;
     gs.paused = false;
     gameRef.current!.scene.resume('GameScene');
@@ -86,7 +92,7 @@ function App() {
   }, []);
 
   const handleRestart = useCallback(() => {
-    const gs = gameRef.current?.scene.getScene('GameScene') as any;
+    const gs = gameRef.current?.scene.getScene('GameScene') as GameScene | undefined;
     if (!gs) return;
     // Ensure scene is running before restart
     if (gs.paused) {
@@ -96,15 +102,15 @@ function App() {
     gameRef.current!.scene.stop('GameScene');
     gameRef.current!.scene.start('GameScene');
     setMenuOpen(false);
-    setInvOpen(false);
+    setSidebar(null);
   }, []);
 
-  const handleApplyAugment = useCallback((instanceId: string) => {
-    const gs = gameRef.current?.scene.getScene('GameScene');
-    if (gs && state.selectedTowerId) {
-      gs.events.emit('apply_augment', { towerId: state.selectedTowerId, instanceId });
+  const handleStartAugment = useCallback((instanceId: string) => {
+    const gs = gameRef.current?.scene.getScene('GameScene') as GameScene | undefined;
+    if (gs) {
+      gs.events.emit('start_augment_mode', { instanceId });
     }
-  }, [state.selectedTowerId]);
+  }, []);
 
   const handleRemoveAugment = useCallback((towerId: string, augmentIndex: number) => {
     const gs = gameRef.current?.scene.getScene('GameScene');
@@ -114,7 +120,7 @@ function App() {
   }, []);
 
   const handleBuyChest = useCallback((rarity: LootRarity): { kind: AugmentKind; rarity: LootRarity } | null => {
-    const gs = gameRef.current?.scene.getScene('GameScene') as any;
+    const gs = gameRef.current?.scene.getScene('GameScene') as GameScene | undefined;
     if (!gs) return null;
     const price = CHEST_PRICES[rarity];
     if (!price || gs.gold < price) return null;
@@ -127,14 +133,14 @@ function App() {
   }, []);
 
   const handleCraft = useCallback((inputRarity: LootRarity): { kind: AugmentKind; rarity: LootRarity } | null => {
-    const gs = gameRef.current?.scene.getScene('GameScene') as any;
+    const gs = gameRef.current?.scene.getScene('GameScene') as GameScene | undefined;
     if (!gs) return null;
     const recipe = CRAFT_RECIPES.find(r => r.inputRarity === inputRarity);
     if (!recipe) return null;
-    const items = gs.inventory.filter((i: any) => i.rarity === recipe.inputRarity);
+    const items = gs.inventory.filter((i: InventoryItem) => i.rarity === recipe.inputRarity);
     if (items.length < recipe.inputCount) return null;
     for (let i = 0; i < recipe.inputCount; i++) {
-      const idx = gs.inventory.findIndex((inv: any) => inv.rarity === recipe.inputRarity);
+      const idx = gs.inventory.findIndex((inv: InventoryItem) => inv.rarity === recipe.inputRarity);
       if (idx >= 0) gs.inventory.splice(idx, 1);
     }
     const kind = rollRandomKind();
@@ -147,16 +153,15 @@ function App() {
 
   const handleSellTower = useCallback(() => {
     if (!state.selectedTowerId) return;
-    const gs = gameRef.current?.scene.getScene('GameScene') as any;
+    const gs = gameRef.current?.scene.getScene('GameScene') as GameScene | undefined;
     if (!gs) return;
-    const tower = gs.towers.find((t: any) => t.id === state.selectedTowerId);
+    const tower = gs.towers.find(t => t.id === state.selectedTowerId);
     if (tower) {
       const def = TOWERS[tower.type];
       gs.gold += Math.floor((def?.cost || 50) * SELL_REFUND_RATE);
       tower.sprite.destroy();
-      tower.hpBar?.destroy();
-      tower.particleEmitters?.forEach((e: any) => e.destroy());
-      gs.towers = gs.towers.filter((t: any) => t !== tower);
+      tower.particleEmitters?.forEach(e => e.destroy());
+      gs.towers = gs.towers.filter(t => t !== tower);
       gs.selectionIndicator?.destroy();
       gs.selectedTowerId = null;
       gs.rangePreview?.destroy();
@@ -168,19 +173,30 @@ function App() {
   return (
     <div className="app-root">
       <GameCanvas onGameReady={onGameReady} />
-      <GameHUD state={state} game={gameInstance} />
+      <GameHUD state={state} game={gameInstance} activePanel={sidebar} />
 
       <Inventory
-        open={invOpen}
-        onClose={() => setInvOpen(false)}
+        open={sidebar === 'inventory'}
+        onClose={() => setSidebar(null)}
         inventory={state.inventory}
-        gold={state.gold}
         selectedTower={state.selectedTower}
         selectedTowerDef={state.selectedTowerDef}
-        onApplyAugment={handleApplyAugment}
+        onStartAugment={handleStartAugment}
         onRemoveAugment={handleRemoveAugment}
         onSellTower={handleSellTower}
+        pendingAugmentInstanceId={state.pendingAugmentInstanceId}
+        availableAugmentTowerCount={state.availableAugmentTowerCount}
+      />
+      <ShopSidebar
+        open={sidebar === 'shop'}
+        onClose={() => setSidebar(null)}
+        gold={state.gold}
         onBuyChest={handleBuyChest}
+      />
+      <ForgeSidebar
+        open={sidebar === 'forge'}
+        onClose={() => setSidebar(null)}
+        inventory={state.inventory}
         onCraft={handleCraft}
       />
 

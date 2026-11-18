@@ -41,7 +41,7 @@ export const ASSET_MANIFEST: AssetEntry[] = [
   { key: 'loot_legendary', width: 36, height: 36, category: 'loot',       description: 'Gold glowing orb' },
 
   // ─── Base (100×100) ───
-  { key: 'base',           width: 100, height: 100, category: 'structure',  description: 'Blue crystal on stone pedestal' },
+  { key: 'base',           width: 140, height: 140, category: 'structure',  description: 'Crystalline home: stone platform, walls with gilded roof, crystal spire, banners, glow' },
 
   // ─── UI Elements ───
   { key: 'selection_diamond',  width: 128, height: 64,  category: 'ui',   description: 'Gold dashed diamond outline for tower selection' },

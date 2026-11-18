@@ -57,7 +57,7 @@ export function PauseMenu({ paused, phase, onResume, onPause, onRestart, onClose
           <MenuButton
             label={paused ? 'RESUME' : 'PAUSE'}
             color={paused ? PALETTE.hpGreen : '#ff6644'}
-            onClick={() => { paused ? onResume() : onPause(); }}
+            onClick={() => (paused ? onResume() : onPause())}
           />
         )}
 

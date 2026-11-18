@@ -2,18 +2,18 @@ import Phaser from 'phaser';
 import {
   MAP_COLS, MAP_ROWS, DEFAULT_PATH, BASE_POINT, SPAWN_POINT,
   GAME_W, GAME_H, MAP_ORIGIN_X, MAP_ORIGIN_Y,
-  ISO_TILE_W, ISO_TILE_H, ISO_W_HALF, ISO_H_HALF, ISO_TILE_SCREEN_DIST,
+  ISO_W_HALF, ISO_H_HALF, ISO_TILE_SCREEN_DIST,
   SCALED_TILE_H, SCALED_TILE_FULL_H,
   TOWERS, ENEMIES, STARTING_GOLD, BASE_HP, PALETTE, AUGMENTS,
   MAX_AUGMENT_SLOTS, TOWER_TYPES_ORDERED, LOOT_TABLE,
-  MIN_SPEED_MULT, TOWER_DUPLICATE_COST_MULT, CHEST_PRICES, CRAFT_RECIPES,
-  DEPTH_PER_TILE, DEPTH_STONE, DEPTH_TREE,
-  DEPTH_ENEMY_BAND, DEPTH_STRUCT_BAND, DEPTH_TOWER, DEPTH_SELECT,
+   MIN_SPEED_MULT, TOWER_DUPLICATE_COST_MULT, CHEST_PRICES, CRAFT_RECIPES, isTowerUnlocked,
+   DEPTH_PER_TILE, DEPTH_STONE, DEPTH_TREE,
+   DEPTH_ENEMY_BAND, DEPTH_STRUCT_BAND, DEPTH_TOWER, DEPTH_SELECT,
   DEPTH_HOVER, DEPTH_RANGE, DEPTH_PLACEMENT, DEPTH_HP_BAR,
   DEPTH_COMBO, DEPTH_PARTICLE, DEPTH_LOOT, DEPTH_PROJECTILE,
   DEPTH_TEXT, DEPTH_EXPLOSION, DEPTH_WAVE_TEXT, DEPTH_OVERLAY, DEPTH_OVERLAY_TEXT,
   type TowerType, type EnemyType, type AugmentKind, type LootRarity,
-  type TowerState, type AppliedAugment, type AugmentEffect, type GameUIState,
+  type TowerState, type AugmentEffect, type GameUIState,
   type InventoryItem, type EnemyResistance,
   rollLoot, shouldDropLoot, rollBossLoot, getWaveConfig, rollRandomKind,
 } from '@tower/shared';
@@ -177,6 +177,7 @@ interface Enemy {
   hpBar: Phaser.GameObjects.Graphics;
   effects: Array<{ type: string; value: number; until: number }>;
   reward: number;
+  _lastCleanse?: number;
 }
 
 interface DroppedLoot {
@@ -223,6 +224,7 @@ export class GameScene extends Phaser.Scene {
   hoverHighlight: Phaser.GameObjects.Graphics | null = null;
 
   baseSprite!: Phaser.GameObjects.Sprite;
+  baseHpBar!: Phaser.GameObjects.Graphics;
 
   pendingAugmentInstanceId: string | null = null;
   autoRunTimer: Phaser.Time.TimerEvent | null = null;
@@ -343,15 +345,43 @@ export class GameScene extends Phaser.Scene {
 
   createBase(): void {
     const { x, y } = tileToWorld(BASE_POINT[0], BASE_POINT[1]);
-    this.baseSprite = this.add.sprite(x, y - 10, 'base')
+    this.baseSprite = this.add.sprite(x, y, 'base')
+      .setOrigin(0.5, 0.92)
       .setDepth(structDepth(BASE_POINT[0], BASE_POINT[1], DEPTH_TOWER));
+    this.baseHpBar = this.add.graphics()
+      .setDepth(structDepth(BASE_POINT[0], BASE_POINT[1], DEPTH_TOWER) + 1);
+    this.updateBaseHealthBar();
+  }
+
+  updateBaseHealthBar(): void {
+    if (!this.baseHpBar || !this.baseHpBar.active) return;
+    this.baseHpBar.clear();
+    if (this.baseHp >= BASE_HP) return;
+
+    const { x, y } = tileToWorld(BASE_POINT[0], BASE_POINT[1]);
+    const barW = 96, barH = 8;
+    const bx = x - barW / 2;
+    const by = y - 118;
+    const hpPct = Math.max(0, this.baseHp / BASE_HP);
+    const hpColor = hpPct > 0.5 ? parseInt(PALETTE.hpGreen.replace('#', ''), 16)
+      : hpPct > 0.25 ? 0xff9800 : parseInt(PALETTE.hpRed.replace('#', ''), 16);
+
+    this.baseHpBar.fillStyle(0x000000, 0.45);
+    this.baseHpBar.fillRoundedRect(bx - 1, by - 1, barW + 2, barH + 2, 3);
+    this.baseHpBar.lineStyle(1, 0xffffff, 0.12);
+    this.baseHpBar.strokeRoundedRect(bx, by, barW, barH, 3);
+    this.baseHpBar.lineStyle(0, 0, 0);
+    this.baseHpBar.fillStyle(0x1a0000, 0.6);
+    this.baseHpBar.fillRoundedRect(bx, by, barW, barH, 3);
+    this.baseHpBar.fillStyle(hpColor);
+    this.baseHpBar.fillRoundedRect(bx, by, barW * hpPct, barH, 3);
   }
 
   createSpawnCave(): void {
     const { x, y } = tileToWorld(SPAWN_POINT[0], SPAWN_POINT[1]);
-    this.add.sprite(x, y, 'spawn_cave')
-      .setOrigin(0.5, 0.5)
-      .setDepth(isoDepth(SPAWN_POINT[0], SPAWN_POINT[1], 5));
+    this.add.sprite(x, y + 60, 'spawn_cave')
+      .setOrigin(0.5, 1)
+      .setDepth(DEPTH_ENEMY_BAND - 1 + isoDepth(SPAWN_POINT[0], SPAWN_POINT[1], 0));
   }
 
   // ─── INPUT ───
@@ -361,7 +391,13 @@ export class GameScene extends Phaser.Scene {
 
     for (let i = 1; i <= 8; i++) {
       const key = this.input.keyboard.addKey(48 + i);
-      key.on('down', () => this.selectTowerType(TOWER_TYPES_ORDERED[i - 1] as TowerType));
+      const type = TOWER_TYPES_ORDERED[i - 1] as TowerType;
+      if (!type) continue;
+      const def = TOWERS[type];
+      key.on('down', () => {
+        if (!isTowerUnlocked(def, this.wave) || this.gold < this.getTowerCost(type)) return;
+        this.selectTowerType(type);
+      });
     }
 
     this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.ESC).on('down', () => {
@@ -408,12 +444,20 @@ export class GameScene extends Phaser.Scene {
           dist(t.sprite.x, t.sprite.y, wx, wy) < ISO_W_HALF * 0.6
         );
         if (clicked) {
+if (clicked.augments.length >= MAX_AUGMENT_SLOTS) {
+          const dt = this.add.text(clicked.sprite.x, clicked.sprite.y - 24, 'SLOTS FULL',
+            { fontFamily: '"Minecraft"', fontSize: '19px', color: '#ff4444', stroke: '#000', strokeThickness: 4 }
+          ).setDepth(DEPTH_TEXT);
+          this.tweens.add({ targets: dt, y: dt.y - 28, alpha: 0, duration: 700, onComplete: () => dt.destroy() });
+          return;
+        }
           this.applyAugment(clicked.id, this.pendingAugmentInstanceId);
           this.pendingAugmentInstanceId = null;
           return;
         }
         this.pendingAugmentInstanceId = null;
         this.emitState();
+        this.game.events.emit('close_sidebar');
         return;
       }
 
@@ -451,8 +495,16 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.events.on('start_augment_mode', (data: { instanceId: string }) => {
+      const inInventory = this.inventory.some(i => i.instanceId === data.instanceId);
+      const availableCount = this.towers.filter(t => t.augments.length < MAX_AUGMENT_SLOTS).length;
+      if (!inInventory || availableCount === 0) {
+        this.pendingAugmentInstanceId = null;
+        this.emitState();
+        return;
+      }
       this.pendingAugmentInstanceId = data.instanceId;
       this.deselectTowerType();
+      this.emitState();
     });
 
     this.events.on('start_wave_click', () => {
@@ -568,9 +620,9 @@ export class GameScene extends Phaser.Scene {
   // ─── TOWER SELECTION ───
 
   selectTowerType(type: TowerType): void {
+    const def = TOWERS[type];
+    if (!isTowerUnlocked(def, this.wave) || this.gold < this.getTowerCost(type)) return;
     this.deselectAll();
-    const cost = this.getTowerCost(type);
-    if (this.gold < cost) return;
     this.selectedTowerType = type;
     this.placementPreview = this.add.sprite(0, 0, `tower_${type}`)
       .setOrigin(0.5, 0.9).setAlpha(0.6).setDepth(DEPTH_PLACEMENT);
@@ -1261,6 +1313,7 @@ export class GameScene extends Phaser.Scene {
 
       if (enemy.pathIndex >= DEFAULT_PATH.length) {
         this.baseHp -= enemy.type === 'boss' ? 3 : 1;
+        this.updateBaseHealthBar();
         enemy.hpBar.destroy(); enemy.sprite.destroy();
         this.enemies = this.enemies.filter(e => e !== enemy);
         this.emitState();
@@ -1303,9 +1356,9 @@ export class GameScene extends Phaser.Scene {
       const def = ENEMIES[enemy.type];
       const res: EnemyResistance = def.resistance || {};
       if (!res.dotCleanse) continue;
-      const last = (enemy as any)._lastCleanse || 0;
+      const last = enemy._lastCleanse || 0;
       if (time - last < 3000) continue;
-      (enemy as any)._lastCleanse = time;
+      enemy._lastCleanse = time;
       for (const other of this.enemies) {
         if (other === enemy) continue;
         if (dist(enemy.sprite.x, enemy.sprite.y, other.sprite.x, other.sprite.y) <= ISO_TILE_SCREEN_DIST * 2.5) {
@@ -1430,11 +1483,13 @@ export class GameScene extends Phaser.Scene {
         tier: selectedTower.tier, augments: selectedTower.augments,
       } : null,
       selectedTowerDef: selectedTower ? TOWERS[selectedTower.type] : null,
-      selectedTowerType: this.selectedTowerType as any,
+      selectedTowerType: this.selectedTowerType,
       autoRun: this.autoRun,
       paused: this.paused,
-      towerTypeCounts,
-    };
+       towerTypeCounts,
+       pendingAugmentInstanceId: this.pendingAugmentInstanceId,
+       availableAugmentTowerCount: this.towers.filter(t => t.augments.length < MAX_AUGMENT_SLOTS).length,
+     };
     this.events.emit('state_update', state);
   }
 

@@ -1,67 +1,33 @@
-name: Deploy Client to GitHub Pages
+name: Deploy to GitHub Pages
 
+# Собирает игру и кладёт dist/ в ветку gh-pages, откуда её раздаёт GitHub Pages.
 on:
   push:
-    branches: [main, master]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./apps/client
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
         with:
           version: 10.30.3
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
-
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-        working-directory: ./
-
-      - name: Build shared package
-        run: pnpm --filter @tower/shared build
-        working-directory: ./
-
-      - name: Build client
-        run: pnpm build
-        working-directory: ./apps/client
-        env:
-          VITE_API_URL: ${{ secrets.VITE_API_URL }}
-
-      - name: Upload Pages artifact
-        uses: actions/upload-pages-artifact@v3
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - uses: JamesIves/github-pages-deploy-action@v4
         with:
-          path: ./apps/client/dist
-
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          branch: gh-pages
+          folder: dist

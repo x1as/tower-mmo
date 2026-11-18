@@ -1,10 +1,12 @@
 import { useEffect, useRef, useCallback } from 'react';
 import Phaser from 'phaser';
 import {
-  TOWERS, PALETTE, TOWER_TYPES_ORDERED, TOWER_DUPLICATE_COST_MULT,
-  GAME_W, GAME_H, HUD_TOP_H, HUD_BOT_H,
+  TOWERS, PALETTE, TOWER_TYPES_ORDERED, TOWER_DUPLICATE_COST_MULT, TOWER_GRADE_LABELS,
+  GAME_W, GAME_H, HUD_TOP_H, HUD_BOT_H, isTowerUnlocked,
 } from '@tower/shared';
-import type { GameUIState } from '@tower/shared';
+import type { GameUIState, TowerType } from '@tower/shared';
+import type { SidebarPanel } from './SidebarUtils';
+import type { GameScene } from '../game/scenes/GameScene';
 
 function formatGold(n: number): string {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
@@ -35,9 +37,10 @@ const UI = {
 interface GameHUDProps {
   state: GameUIState;
   game: Phaser.Game | null;
+  activePanel: SidebarPanel | null;
 }
 
-export function GameHUD({ state, game }: GameHUDProps) {
+export function GameHUD({ state, game, activePanel }: GameHUDProps) {
   const topRef = useRef<HTMLCanvasElement>(null);
   const botRef = useRef<HTMLCanvasElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
@@ -182,22 +185,27 @@ export function GameHUD({ state, game }: GameHUDProps) {
 
     const btnH = 32, midY = HUD_TOP_H / 2;
 
-    // BAG button
-    drawBtn(c, GAME_W - 460, midY - btnH / 2, 90, btnH, 'BAG', PALETTE.beam);
+    const bagX = GAME_W - 650;
+    const shopX = GAME_W - 550;
+    const forgeX = GAME_W - 450;
+
+    drawBtn(c, bagX, midY - btnH / 2, 90, btnH, 'BAG', PALETTE.beam, activePanel === 'inventory');
+    drawBtn(c, shopX, midY - btnH / 2, 90, btnH, 'SHOP', PALETTE.gold, activePanel === 'shop');
+    drawBtn(c, forgeX, midY - btnH / 2, 90, btnH, 'FORGE', PALETTE.flame, activePanel === 'forge');
+
     if (state.inventory.length > 0) {
       c.fillStyle = PALETTE.beam;
       c.beginPath();
-      c.arc(GAME_W - 460 + 82, midY - btnH / 2 + 2, 10, 0, Math.PI * 2);
+      c.arc(bagX + 82, midY - btnH / 2 + 2, 10, 0, Math.PI * 2);
       c.fill();
       c.font = '11px "Minecraft", monospace';
       c.fillStyle = '#fff';
       c.textAlign = 'center';
       c.textBaseline = 'middle';
-      c.fillText(`${state.inventory.length}`, GAME_W - 460 + 82, midY - btnH / 2 + 2);
+      c.fillText(`${state.inventory.length}`, bagX + 82, midY - btnH / 2 + 2);
       c.textAlign = 'left';
     }
 
-    // START or PAUSE button (same position)
     const showStart = (state.phase === 'build' || state.phase === 'wave_end') && !state.autoRun;
     const showPause = state.phase === 'combat';
     if (showStart) {
@@ -208,11 +216,10 @@ export function GameHUD({ state, game }: GameHUDProps) {
       drawBtn(c, GAME_W - 350, midY - btnH / 2, 120, btnH, pauseText, pauseColor);
     }
 
-    // AUTO
     const autoColor = state.autoRun ? PALETTE.gold : '#444455';
     const autoText = state.autoRun ? 'AUTO ON' : 'AUTO OFF';
     drawBtn(c, GAME_W - 210, midY - btnH / 2, 190, btnH, autoText, autoColor);
-  }, [state]);
+  }, [state, activePanel]);
 
   // ─── Extract tower textures from Phaser for footer icons ───
   const towerImagesRef = useRef<Map<string, HTMLCanvasElement | HTMLImageElement>>(new Map());
@@ -272,6 +279,8 @@ export function GameHUD({ state, game }: GameHUDProps) {
     for (let i = 0; i < types.length; i++) {
       const type = types[i];
       const def = TOWERS[type];
+      const unlocked = isTowerUnlocked(def, state.wave);
+      const gradeLabel = TOWER_GRADE_LABELS[def.grade] || `T${def.grade}`;
       const tCount = (state.towerTypeCounts || {})[type] || 0;
       const cost = Math.floor(def.cost * Math.pow(TOWER_DUPLICATE_COST_MULT, tCount));
       const cx = startX + i * (cardW + gap);
@@ -281,41 +290,41 @@ export function GameHUD({ state, game }: GameHUDProps) {
 
       // ── Card background: lighter tower-colored tint ──
       // Outer glow layer
-      c.fillStyle = `rgba(${rgb},${isSelected ? 0.2 : 0.08})`;
+      c.fillStyle = !unlocked ? 'rgba(80,80,90,0.04)' : `rgba(${rgb},${isSelected ? 0.2 : 0.08})`;
       roundRect(c, cx, cardY, cardW, cardH, 8);
       c.fill();
 
-      // Inner panel — lighter than before
-      c.fillStyle = isSelected ? `rgba(${rgb},0.1)` : 'rgba(22,26,38,0.9)';
+      // Inner panel
+      c.fillStyle = !unlocked ? 'rgba(16,18,26,0.9)' : (isSelected ? `rgba(${rgb},0.1)` : 'rgba(22,26,38,0.9)');
       roundRect(c, cx + 1, cardY + 1, cardW - 2, cardH - 2, 7);
       c.fill();
 
       // Subtle top highlight
       const hlGrad = c.createLinearGradient(cx, cardY, cx, cardY + cardH);
-      hlGrad.addColorStop(0, `rgba(${rgb},${isSelected ? 0.12 : 0.05})`);
+      hlGrad.addColorStop(0, !unlocked ? 'rgba(255,255,255,0.01)' : `rgba(${rgb},${isSelected ? 0.12 : 0.05})`);
       hlGrad.addColorStop(0.5, 'transparent');
       hlGrad.addColorStop(1, `rgba(${rgb},0.02)`);
       c.fillStyle = hlGrad;
       roundRect(c, cx + 1, cardY + 1, cardW - 2, cardH - 2, 7);
       c.fill();
 
-      // ── Left color strip ──
-      c.fillStyle = def.color;
-      c.globalAlpha = isSelected ? 0.9 : 0.5;
+      // Left color strip
+      c.fillStyle = unlocked ? def.color : '#4a4a55';
+      c.globalAlpha = isSelected && unlocked ? 0.9 : 0.4;
       roundRect(c, cx, cardY, 3, cardH, { tl: 8, tr: 0, bl: 8, br: 0 });
       c.fill();
       c.globalAlpha = 1;
 
-      // ── Border ──
-      c.strokeStyle = def.color;
-      c.globalAlpha = isSelected ? 0.6 : 0.12;
-      c.lineWidth = isSelected ? 1.5 : 1;
+      // Border
+      c.strokeStyle = unlocked ? def.color : '#343642';
+      c.globalAlpha = isSelected && unlocked ? 0.6 : 0.18;
+      c.lineWidth = isSelected && unlocked ? 1.5 : 1;
       roundRect(c, cx, cardY, cardW, cardH, 8);
       c.stroke();
       c.globalAlpha = 1;
 
-      // ── Selected glow ──
-      if (isSelected) {
+      // Selected glow
+      if (isSelected && unlocked) {
         c.shadowColor = def.color;
         c.shadowBlur = 16;
         c.strokeStyle = def.color;
@@ -327,7 +336,7 @@ export function GameHUD({ state, game }: GameHUDProps) {
         c.globalAlpha = 1;
       }
 
-      // ── Tower icon — left zone with padding ──
+      // Tower icon — left zone with padding
       const towerImg = towerImagesRef.current.get(type);
       if (towerImg) {
         const pad = 12;
@@ -339,10 +348,19 @@ export function GameHUD({ state, game }: GameHUDProps) {
         if (iconW > maxIconW) { iconW = maxIconW; iconH = iconW / aspect; }
         const iconX = cx + 8 + (iconZoneW - 8) / 2 - iconW / 2;
         const iconY = cardY + cardH / 2 - iconH / 2;
+        c.save();
+        if (!unlocked) c.globalAlpha = 0.25;
         c.drawImage(towerImg, iconX, iconY, iconW, iconH);
+        c.restore();
       }
 
-      // ── Right side text ──
+      // Grade badge
+      c.font = '11px "Minecraft", monospace';
+      c.fillStyle = unlocked ? def.color : '#555662';
+      c.textAlign = 'left';
+      c.fillText(`GRADE ${gradeLabel}`, cx + 12, cardY + 14);
+
+      // Right side text
       const textX = cx + iconZoneW + 10;
       c.textBaseline = 'middle';
 
@@ -364,8 +382,8 @@ export function GameHUD({ state, game }: GameHUDProps) {
       c.fillText(def.special, textX, cardY + 44);
 
       // Separator
-      c.strokeStyle = def.color;
-      c.globalAlpha = 0.12;
+      c.strokeStyle = unlocked ? def.color : '#343642';
+      c.globalAlpha = unlocked ? 0.12 : 0.25;
       c.lineWidth = 1;
       c.beginPath();
       c.moveTo(textX, cardY + 57);
@@ -373,40 +391,48 @@ export function GameHUD({ state, game }: GameHUDProps) {
       c.stroke();
       c.globalAlpha = 1;
 
-      // Price
+      // Price or unlock requirement
       c.font = '18px "Minecraft", monospace';
-      c.fillStyle = canAfford ? PALETTE.gold : PALETTE.hpRed;
+      c.fillStyle = unlocked ? PALETTE.gold : '#555662';
       c.fillText('\u2666', textX, cardY + 76);
       const dw = c.measureText('\u2666').width;
       c.font = '16px "Minecraft", monospace';
-      c.fillStyle = canAfford ? '#fff' : PALETTE.hpRed;
-      c.fillText(formatGold(cost), textX + dw + 6, cardY + 76);
+      if (unlocked) {
+        c.fillStyle = canAfford ? '#fff' : PALETTE.hpRed;
+        c.fillText(formatGold(cost), textX + dw + 6, cardY + 76);
+      } else {
+        c.fillStyle = '#777887';
+        c.fillText(`WAVE ${def.unlockWave}`, textX + dw + 6, cardY + 76);
+      }
 
       c.textAlign = 'left';
       c.textBaseline = 'alphabetic';
     }
   }, [state, game]);
 
-  // ─── Helpers to check if mouse is over a clickable region ───
-  const isOverCard = useCallback((mx: number): boolean => {
+  const getCardTypeAt = useCallback((mx: number): TowerType | null => {
     const cardW = 210, gap = 10;
     const types = TOWER_TYPES_ORDERED;
     const totalW = types.length * (cardW + gap) - gap;
     const startX = GAME_W / 2 - totalW / 2;
     for (let i = 0; i < types.length; i++) {
       const cx = startX + i * (cardW + gap);
-      if (mx >= cx && mx <= cx + cardW) return true;
+      if (mx >= cx && mx <= cx + cardW) return types[i] as TowerType;
     }
-    return false;
+    return null;
   }, []);
 
+  const isOverCard = useCallback((mx: number): boolean => {
+    const type = getCardTypeAt(mx);
+    return !!type && isTowerUnlocked(TOWERS[type], state.wave);
+  }, [getCardTypeAt, state.wave]);
+
   const isOverHeaderBtn = useCallback((mx: number): boolean => {
-    // BAG
-    if (mx >= GAME_W - 460 && mx <= GAME_W - 360) return true;
-    // START
-    if (mx >= GAME_W - 350 && mx <= GAME_W - 220) return true;
-    // AUTO
-    if (mx >= GAME_W - 210 && mx <= GAME_W - 10) return true;
+    if (mx >= GAME_W - 650 && mx <= GAME_W - 560) return true;
+    if (mx >= GAME_W - 550 && mx <= GAME_W - 460) return true;
+    if (mx >= GAME_W - 450 && mx <= GAME_W - 360) return true;
+    if (mx >= GAME_W - 350 && mx <= GAME_W - 230) return true;
+    if (mx >= GAME_W - 210 && mx <= GAME_W - 20) return true;
     return false;
   }, []);
 
@@ -419,20 +445,14 @@ export function GameHUD({ state, game }: GameHUDProps) {
     const scaleX = GAME_W / rect.width;
     const mx = (e.clientX - rect.left) * scaleX;
 
-    const cardW = 210, gap = 10;
-    const types = TOWER_TYPES_ORDERED;
-    const totalW = types.length * (cardW + gap) - gap;
-    const startX = GAME_W / 2 - totalW / 2;
+    const type = getCardTypeAt(mx);
+    if (!type) return;
+    const def = TOWERS[type];
+    if (!isTowerUnlocked(def, state.wave)) return;
 
-    for (let i = 0; i < types.length; i++) {
-      const cx = startX + i * (cardW + gap);
-      if (mx >= cx && mx <= cx + cardW) {
-        const gs = game.scene.getScene('GameScene') as any;
-        gs?.selectTowerType(types[i]);
-        return;
-      }
-    }
-  }, [game]);
+    const gs = game.scene.getScene('GameScene') as GameScene;
+    gs?.selectTowerType(type);
+  }, [game, getCardTypeAt, state.wave]);
 
   const handleBotMove = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
     const cv = botRef.current;
@@ -451,15 +471,22 @@ export function GameHUD({ state, game }: GameHUDProps) {
     const scaleX = GAME_W / rect.width;
     const mx = (e.clientX - rect.left) * scaleX;
 
-    if (mx >= GAME_W - 460 && mx <= GAME_W - 360) {
+    if (mx >= GAME_W - 650 && mx <= GAME_W - 560) {
       game.events.emit('toggle_inventory');
       return;
     }
-    if (mx >= GAME_W - 350 && mx <= GAME_W - 220) {
-      const gs = game.scene.getScene('GameScene') as any;
+    if (mx >= GAME_W - 550 && mx <= GAME_W - 460) {
+      game.events.emit('open_shop');
+      return;
+    }
+    if (mx >= GAME_W - 450 && mx <= GAME_W - 360) {
+      game.events.emit('open_forge');
+      return;
+    }
+    if (mx >= GAME_W - 350 && mx <= GAME_W - 230) {
+      const gs = game.scene.getScene('GameScene') as GameScene;
       if (!gs) return;
       if (gs.phase === 'combat') {
-        // Toggle pause from React (paused scene can't receive its own events)
         gs.paused = !gs.paused;
         if (gs.paused) {
           game.scene.pause('GameScene');
@@ -540,7 +567,7 @@ function roundRect(
 function drawBtn(
   c: CanvasRenderingContext2D,
   x: number, y: number, w: number, h: number,
-  text: string, color: string,
+  text: string, color: string, active = false,
 ) {
   const rgb = hexRgb(color);
 
@@ -553,6 +580,18 @@ function drawBtn(
   c.fillStyle = 'rgba(12,14,22,0.9)';
   roundRect(c, x + 1, y + 1, w - 2, h - 2, 4);
   c.fill();
+
+  if (active) {
+    c.shadowColor = color;
+    c.shadowBlur = 10;
+    c.strokeStyle = color;
+    c.globalAlpha = 0.8;
+    c.lineWidth = 1.5;
+    roundRect(c, x, y, w, h, 5);
+    c.stroke();
+    c.shadowBlur = 0;
+    c.globalAlpha = 1;
+  }
 
   // Bottom accent
   c.fillStyle = color;

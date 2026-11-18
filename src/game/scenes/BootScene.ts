@@ -20,6 +20,9 @@ const TOWER_ASSET_MAP: Record<string, { color: string; bottom: string; top: stri
   missile: { color: 'yellow', bottom: 'bottom-2', top: 'top-2' },
 };
 
+const CUSTOM_SPRITES = import.meta.glob('../sprites/custom/*.png', { eager: true, query: '?url', import: 'default' }) as Record<string, string>;
+const customSprite = (key: string): string | undefined => CUSTOM_SPRITES[`../sprites/custom/${key}.png`];
+
 export class BootScene extends Phaser.Scene {
   constructor() {
     super({ key: 'BootScene' });
@@ -46,7 +49,8 @@ export class BootScene extends Phaser.Scene {
       this.load.image(`iso_stone_raw_${i}`, `iso/decor/stone-${i}.png`);
     }
 
-    // Custom sprites — PNGs auto-replace procedural if present
+    // Custom sprites: a PNG in src/game/sprites/custom/<key>.png replaces the procedural one.
+    // Only files that exist are requested, so a missing override never hits the network.
     const spriteKeys = [
       'enemy_scatter_imp', 'enemy_thermal_drake', 'enemy_mirror_wisp', 'enemy_blink_fox',
       'enemy_ground_wurm', 'enemy_magma_golem', 'enemy_pure_spirit', 'enemy_iron_shell', 'enemy_boss',
@@ -56,20 +60,23 @@ export class BootScene extends Phaser.Scene {
       'base',
     ];
     for (const key of spriteKeys) {
-      this.load.image(key, `sprites/${key}.png`);
+      const url = customSprite(key);
+      if (url) this.load.image(key, url);
     }
 
     // ─── Animated spritesheets (horizontal strip, all same-size frames) ───
     // Loot orbs: 4 rarities, each 6 frames, 48x48 per frame
     const lootRarities = ['common', 'rare', 'epic', 'legendary'];
     for (const r of lootRarities) {
-      this.load.spritesheet(`loot_${r}`, `sprites/loot_${r}.png`, { frameWidth: 48, frameHeight: 48 });
-      this.load.spritesheet(`loot_ray_${r}`, `sprites/loot_ray_${r}.png`, { frameWidth: 12, frameHeight: 48 });
+      const orb = customSprite(`loot_${r}`), ray = customSprite(`loot_ray_${r}`);
+      if (orb) this.load.spritesheet(`loot_${r}`, orb, { frameWidth: 48, frameHeight: 48 });
+      if (ray) this.load.spritesheet(`loot_ray_${r}`, ray, { frameWidth: 12, frameHeight: 48 });
     }
 
     // Augment particles: 8 types, each 6 frames, 16x16 per frame
     for (const kind of AUGMENT_KINDS_ORDERED) {
-      this.load.spritesheet(`particle_${kind}`, `sprites/particle_${kind}.png`, { frameWidth: 16, frameHeight: 16 });
+      const url = customSprite(`particle_${kind}`);
+      if (url) this.load.spritesheet(`particle_${kind}`, url, { frameWidth: 16, frameHeight: 16 });
     }
 
     this.load.on('loaderror', (file: Phaser.Loader.File) => {
@@ -101,10 +108,9 @@ export class BootScene extends Phaser.Scene {
       );
     }
 
-    // Scale cave.png -> 'spawn_cave' texture (replaces procedural cave at enemy spawn)
-    if (this.textures.exists('iso_cave_raw')) {
-      this.scaleTexture('iso_cave_raw', 'spawn_cave', 360, 240);
-    }
+    // Generate spawn_cave texture from cave.png, cropping transparent
+    // bottom rows so the cave sits on the ground instead of floating above it.
+    this.scaleCave('iso_cave_raw', 'spawn_cave', 360, 240);
 
     // ─── Create animations from spritesheets (if loaded) ───
     const lootRarities = ['common', 'rare', 'epic', 'legendary'];
@@ -164,6 +170,54 @@ export class BootScene extends Phaser.Scene {
     cv.width = SCALED_TILE_W;
     cv.height = SCALED_TILE_FULL_H;
     cv.getContext('2d')!.drawImage(src, 0, 0, SCALED_TILE_W, SCALED_TILE_FULL_H);
+    this.textures.addCanvas(destKey, cv);
+  }
+
+  /**
+   * Scale a raw cave image to the spawn_cave texture, automatically trimming
+   * fully-transparent bottom rows so the cave content sits flush on the ground.
+   */
+  scaleCave(srcKey: string, destKey: string, w: number, h: number): void {
+    if (!this.textures.exists(srcKey)) return;
+    const src = this.textures.get(srcKey).getSourceImage() as HTMLImageElement;
+
+    // Sample alpha to find the first row that contains opaque content.
+    const probe = document.createElement('canvas');
+    probe.width = src.naturalWidth;
+    probe.height = src.naturalHeight;
+    const pctx = probe.getContext('2d')!;
+    pctx.drawImage(src, 0, 0);
+    const px = pctx.getImageData(0, 0, probe.width, probe.height).data;
+    const stride = probe.width * 4;
+    let top = 0;
+    for (let r = 0; r < probe.height; r++) {
+      let opaque = false;
+      for (let c = 0; c < probe.width; c++) {
+        if (px[r * stride + c * 4 + 3] > 0) { opaque = true; break; }
+      }
+      if (opaque) { top = r; break; }
+    }
+    let bottom = probe.height - 1;
+    for (let r = probe.height - 1; r >= top; r--) {
+      let opaque = false;
+      for (let c = 0; c < probe.width; c++) {
+        if (px[r * stride + c * 4 + 3] > 0) { opaque = true; break; }
+      }
+      if (opaque) { bottom = r; break; }
+    }
+    const srcH = Math.max(1, bottom - top + 1);
+
+    const cv = document.createElement('canvas');
+    cv.width = w;
+    cv.height = h;
+    const ctx = cv.getContext('2d')!;
+    // Draw only the content region, vertically centered so the trimmed cave
+    // rests on the ground plane.
+    const scale = h / srcH;
+    const drawW = src.naturalWidth * scale;
+    const offsetX = (w - drawW) / 2;
+    const dy = h - srcH * scale;
+    ctx.drawImage(src, 0, top, src.naturalWidth, srcH, offsetX, dy, drawW, srcH * scale);
     this.textures.addCanvas(destKey, cv);
   }
 

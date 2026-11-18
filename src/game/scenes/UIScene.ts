@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { MAP_HEIGHT, TOWERS, PALETTE, TOWER_TYPES_ORDERED, TOWER_DUPLICATE_COST_MULT } from '@tower/shared';
 import type { GameUIState } from '@tower/shared';
+import type { GameScene } from './GameScene';
 
 function formatGold(n: number): string {
   if (n >= 1000000) return `${(n / 1000000).toFixed(1)}M`;
@@ -203,7 +204,7 @@ export class UIScene extends Phaser.Scene {
       const icon = this.add.sprite(cx, barCY - 4, `tower_${type}`).setScale(0.40).setDepth(1);
       icon.setInteractive({ useHandCursor: true });
       icon.on('pointerdown', () => {
-        const gs = this.scene.get('GameScene') as any;
+        const gs = this.scene.get('GameScene') as GameScene;
         gs.selectTowerType(type);
       });
 

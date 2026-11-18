@@ -6,7 +6,7 @@
 import Phaser from 'phaser';
 import {
   PALETTE, AUGMENTS, AUGMENT_KINDS_ORDERED,
-  ISO_TILE_W, ISO_TILE_H, ISO_W_HALF, ISO_H_HALF, ENEMY_SPRITE_SIZE,
+  ISO_TILE_W, ISO_TILE_H, ENEMY_SPRITE_SIZE,
 } from '@tower/shared';
 import type { LootRarity, AugmentKind } from '@tower/shared';
 
@@ -43,22 +43,6 @@ function lighten(hex: string, amt = 0.3): string {
 function groundShadow(c: CanvasRenderingContext2D, cx: number, cy: number, rx = 18, ry = 6) {
   c.fillStyle = 'rgba(0,0,0,0.35)';
   c.beginPath(); c.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2); c.fill();
-}
-
-function stoneBase(c: CanvasRenderingContext2D, cx: number, by: number) {
-  const g = c.createLinearGradient(cx - 14, by - 10, cx + 14, by + 2);
-  g.addColorStop(0, PALETTE.stoneLight); g.addColorStop(0.5, PALETTE.stoneMid); g.addColorStop(1, PALETTE.stoneDark);
-  c.fillStyle = g;
-  rr(c, cx - 16, by - 10, 32, 12, 4); c.fill();
-  // Highlight top edge
-  c.fillStyle = 'rgba(255,255,255,0.12)';
-  c.fillRect(cx - 14, by - 10, 28, 2);
-}
-
-function towerGlow(c: CanvasRenderingContext2D, cx: number, cy: number, color: string, r = 20) {
-  const g = c.createRadialGradient(cx, cy, 0, cx, cy, r);
-  g.addColorStop(0, color + '30'); g.addColorStop(1, 'transparent');
-  c.fillStyle = g; c.fillRect(0, 0, S, S);
 }
 
 // Body with top-left lighting gradient
@@ -483,34 +467,118 @@ function genAugmentIcons(scene: Phaser.Scene) {
 // ─── BASE CRYSTAL ───
 
 function genBase(scene: Phaser.Scene) {
-  const BW = 100, BH = 100;
+  const BW = 140, BH = 140;
   tex(scene, 'base', BW, BH, c => {
-    const cx = BW / 2, cy = BH / 2;
-    groundShadow(c, cx, BH - 8, 36, 10);
-    // Pedestal
-    const pg = c.createLinearGradient(12, 56, 88, 90);
-    pg.addColorStop(0, PALETTE.stoneLight); pg.addColorStop(0.5, PALETTE.stoneMid); pg.addColorStop(1, PALETTE.stoneDark);
-    c.fillStyle = pg; rr(c, 14, 58, 72, 34, 6); c.fill();
-    c.strokeStyle = darken(PALETTE.stoneDark, 0.3); c.lineWidth = 1; rr(c, 14, 58, 72, 34, 6); c.stroke();
-    // Crystal
-    const cg = c.createLinearGradient(34, 4, 66, 60);
-    cg.addColorStop(0, PALETTE.frostHi); cg.addColorStop(0.3, PALETTE.frost); cg.addColorStop(0.7, darken(PALETTE.frost, 0.3)); cg.addColorStop(1, darken(PALETTE.frost, 0.5));
+    const cx = BW / 2;
+    // Shadow on ground plane
+    groundShadow(c, cx, BH - 10, 46, 10);
+
+    // Stone platform
+    const py = BH - 40;
+    const pg = c.createLinearGradient(28, py, 112, py + 36);
+    pg.addColorStop(0, PALETTE.stoneLight);
+    pg.addColorStop(0.5, PALETTE.stoneMid);
+    pg.addColorStop(1, PALETTE.stoneDark);
+    c.fillStyle = pg;
+    rr(c, 28, py, 84, 36, 8);
+    c.fill();
+    c.strokeStyle = darken(PALETTE.stoneDark, 0.3);
+    c.lineWidth = 1;
+    rr(c, 28, py, 84, 36, 8);
+    c.stroke();
+    // Platform rim highlight
+    c.strokeStyle = 'rgba(255,255,255,0.2)';
+    c.lineWidth = 1;
+    rr(c, 29, py, 82, 36, 8);
+    c.stroke();
+
+    // Walls
+    const wx = cx - 28, wy = py - 52, ww = 56, wh = 52;
+    bodyGrad(c, PALETTE.stoneMid, wx, wy, ww, wh, 4);
+
+    // Gate
+    c.fillStyle = '#4a321e';
+    rr(c, cx - 10, wy + 28, 20, 22, 3);
+    c.fill();
+    c.strokeStyle = darken('#4a321e', 0.3);
+    c.lineWidth = 1;
+    rr(c, cx - 10, wy + 28, 20, 22, 3);
+    c.stroke();
+    // Door knocker
+    c.fillStyle = PALETTE.gold;
+    c.beginPath();
+    c.arc(cx, wy + 38, 3, 0, Math.PI * 2);
+    c.fill();
+
+    // Gilded roof (rounded triangle)
+    const rx = cx, ry = wy - 16, rw = 44, rh = 22;
+    const rg = c.createLinearGradient(rx, ry, rx, ry + rh);
+    rg.addColorStop(0, lighten(PALETTE.gold, 0.3));
+    rg.addColorStop(0.5, PALETTE.gold);
+    rg.addColorStop(1, darken(PALETTE.gold, 0.35));
+    c.fillStyle = rg;
+    c.beginPath();
+    c.moveTo(rx - rw, ry + rh);
+    c.quadraticCurveTo(rx, ry - rh + 6, rx + rw, ry + rh);
+    c.quadraticCurveTo(rx + rw, ry + rh, rx - rw, ry + rh);
+    c.closePath();
+    c.fill();
+    c.strokeStyle = darken(PALETTE.gold, 0.5);
+    c.lineWidth = 1;
+    c.stroke();
+
+    // Banners
+    c.fillStyle = 'rgba(255,255,255,0.22)';
+    rr(c, wx - 8, wy + 4, 6, 30, 2);
+    c.fill();
+    c.fillStyle = 'rgba(255,255,255,0.22)';
+    rr(c, wx + ww + 2, wy + 4, 6, 30, 2);
+    c.fill();
+
+    // Crystal spire
+    const cg = c.createLinearGradient(rx, wy - 44, rx, ry + rh - 8);
+    cg.addColorStop(0, PALETTE.frostHi);
+    cg.addColorStop(0.35, PALETTE.frost);
+    cg.addColorStop(0.75, darken(PALETTE.frost, 0.3));
+    cg.addColorStop(1, darken(PALETTE.frost, 0.55));
     c.fillStyle = cg;
-    c.beginPath(); c.moveTo(cx, 2); c.lineTo(cx + 20, 30); c.lineTo(cx + 16, 60); c.lineTo(cx - 16, 60); c.lineTo(cx - 20, 30); c.closePath(); c.fill();
-    c.strokeStyle = darken(PALETTE.frost, 0.3); c.lineWidth = 1; c.stroke();
-    // Facet highlight
-    c.fillStyle = 'rgba(255,255,255,0.2)';
-    c.beginPath(); c.moveTo(cx - 2, 6); c.lineTo(cx - 14, 34); c.lineTo(cx - 10, 58); c.lineTo(cx, 58); c.lineTo(cx - 4, 22); c.closePath(); c.fill();
-    // Glow
-    const gg = c.createRadialGradient(cx, 36, 0, cx, 36, 36);
-    gg.addColorStop(0, 'rgba(79,179,255,0.25)'); gg.addColorStop(1, 'transparent');
-    c.fillStyle = gg; c.fillRect(0, 0, BW, BH);
+    c.beginPath();
+    c.moveTo(rx, wy - 44);
+    c.lineTo(rx + 14, ry - 6);
+    c.lineTo(rx + 10, py + 8);
+    c.lineTo(rx - 10, py + 8);
+    c.lineTo(rx - 14, ry - 6);
+    c.closePath();
+    c.fill();
+    c.strokeStyle = darken(PALETTE.frost, 0.4);
+    c.lineWidth = 1;
+    c.stroke();
+    // Spire facet highlight
+    c.fillStyle = 'rgba(255,255,255,0.22)';
+    c.beginPath();
+    c.moveTo(rx - 2, wy - 40);
+    c.lineTo(rx - 10, ry - 2);
+    c.lineTo(rx - 7, py + 4);
+    c.lineTo(rx, py + 4);
+    c.closePath();
+    c.fill();
+
+    // Glow around crystal
+    const gg = c.createRadialGradient(rx, ry - 10, 0, rx, ry - 10, 40);
+    gg.addColorStop(0, 'rgba(79,179,255,0.25)');
+    gg.addColorStop(1, 'transparent');
+    c.fillStyle = gg;
+    c.fillRect(0, 0, BW, BH);
   });
 }
+
 
 // ─── SPAWN CAVE ───
 
 function genCave(scene: Phaser.Scene) {
+  // If the cave image was loaded and processed in BootScene, keep that texture
+  // instead of overwriting it with a procedural fallback.
+  if (scene.textures.exists('spawn_cave')) return;
   // 3-tile wide cave mouth (144×96) that sits behind the spawn point
   const CW = S * 3, CH = S * 2;
   tex(scene, 'spawn_cave', CW, CH, c => {

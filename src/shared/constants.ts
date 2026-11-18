@@ -75,7 +75,7 @@ export const STARTING_GOLD = 200;
 export const MAX_AUGMENT_SLOTS = 10;
 export const SELL_REFUND_RATE = 0.35;
 export const MIN_SPEED_MULT = 0.15;
-export const TOWER_DUPLICATE_COST_MULT = 100;
+export const TOWER_DUPLICATE_COST_MULT = 1.25;
 
 export const CHEST_PRICES: Record<string, number> = {
   common: 100,
@@ -145,17 +145,22 @@ export const PALETTE = {
 // ─── Towers ───
 
 export const TOWERS: Record<string, TowerDef> = {
-  cannon:  { type: 'cannon',  name: 'Cannon',  cost: 130, damage: 25, range: 3.0,  fireRate: 0.4,  splash: 1.2, special: 'Area splash',      color: PALETTE.cannon },
-  frost:   { type: 'frost',   name: 'Frost',   cost: 100, damage: 10, range: 2.5,  fireRate: 0.6,  splash: 0,   special: 'Slows 40%',        color: PALETTE.frost },
-  beam:    { type: 'beam',    name: 'Beam',    cost: 200, damage: 45, range: 3.5,  fireRate: 1.2,  splash: 0,   special: 'Continuous DPS',    color: PALETTE.beam },
-  sniper:  { type: 'sniper',  name: 'Sniper',  cost: 180, damage: 80, range: 4.5,  fireRate: 1.5,  splash: 0,   special: 'Long range',       color: PALETTE.sniper },
-  tesla:   { type: 'tesla',   name: 'Tesla',   cost: 160, damage: 22, range: 2.5,  fireRate: 0.6,  splash: 0,   special: 'Chain lightning',   color: PALETTE.tesla },
-  flame:   { type: 'flame',   name: 'Flame',   cost: 120, damage: 15, range: 1.5,  fireRate: 0.8,  splash: 1.5, special: 'Cone DOT burn',     color: PALETTE.flame },
-  poison:  { type: 'poison',  name: 'Poison',  cost: 140, damage: 12, range: 3.0,  fireRate: 0.4,  splash: 1.5, special: 'Stacking AOE DOT',  color: PALETTE.poison },
-  missile: { type: 'missile', name: 'Missile', cost: 170, damage: 50, range: 4.0,  fireRate: 0.6,  splash: 0.8, special: 'Homing + armor',    color: PALETTE.missile },
+  cannon:  { type: 'cannon',  name: 'Cannon',  cost: 100, damage: 22, range: 3.0, fireRate: 0.55, splash: 1.0, special: 'Area splash',       color: PALETTE.cannon, grade: 1, unlockWave: 0 },
+  frost:   { type: 'frost',   name: 'Frost',   cost: 100, damage: 10, range: 2.5, fireRate: 0.80, splash: 0,   special: 'Slows 40%',         color: PALETTE.frost,  grade: 1, unlockWave: 0 },
+  tesla:   { type: 'tesla',   name: 'Tesla',   cost: 200, damage: 20, range: 2.5, fireRate: 0.70, splash: 0,   special: 'Chain lightning',    color: PALETTE.tesla,  grade: 2, unlockWave: 3 },
+  beam:    { type: 'beam',    name: 'Beam',    cost: 220, damage: 38, range: 3.5, fireRate: 1.00, splash: 0,   special: 'Continuous DPS',     color: PALETTE.beam,   grade: 2, unlockWave: 3 },
+  sniper:  { type: 'sniper',  name: 'Sniper',  cost: 250, damage: 70, range: 4.5, fireRate: 1.20, splash: 0,   special: 'Long range',         color: PALETTE.sniper, grade: 2, unlockWave: 3 },
+  flame:   { type: 'flame',   name: 'Flame',   cost: 280, damage: 18, range: 2.0, fireRate: 1.00, splash: 1.5, special: 'Cone DOT burn',      color: PALETTE.flame,  grade: 3, unlockWave: 6 },
+  poison:  { type: 'poison',  name: 'Poison',  cost: 300, damage: 14, range: 3.0, fireRate: 0.55, splash: 1.5, special: 'Stacking AOE DOT',   color: PALETTE.poison, grade: 3, unlockWave: 6 },
+  missile: { type: 'missile', name: 'Missile', cost: 380, damage: 45, range: 4.0, fireRate: 0.55, splash: 0.8, special: 'Homing + armor',     color: PALETTE.missile, grade: 4, unlockWave: 9 },
 };
 
-export const TOWER_TYPES_ORDERED: string[] = ['cannon', 'frost', 'beam', 'sniper', 'tesla', 'flame', 'poison', 'missile'];
+export const TOWER_TYPES_ORDERED: import('./types').TowerType[] = ['cannon', 'frost', 'tesla', 'beam', 'sniper', 'flame', 'poison', 'missile'];
+export const TOWER_GRADE_LABELS: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV' };
+
+export function isTowerUnlocked(def: TowerDef, wave: number): boolean {
+  return wave >= def.unlockWave;
+}
 
 // ─── Enemies ───
 

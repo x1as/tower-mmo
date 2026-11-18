@@ -17,6 +17,8 @@ export interface TowerDef {
   splash: number;
   special: string;
   color: string;
+  grade: number;
+  unlockWave: number;
 }
 
 export interface TowerState {
@@ -137,4 +139,6 @@ export interface GameUIState {
   autoRun: boolean;
   paused: boolean;
   towerTypeCounts: Record<string, number>;
+  pendingAugmentInstanceId: string | null;
+  availableAugmentTowerCount: number;
 }
