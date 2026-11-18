@@ -29,6 +29,8 @@ export class BootScene extends Phaser.Scene {
   }
 
   preload(): void {
+    this.showLoadingBar();
+
     // Ground tiles
     this.load.image('iso_grass_raw', 'iso/tiles/grass.png');
     this.load.image('iso_bald_raw', 'iso/tiles/bald.png');
@@ -149,6 +151,17 @@ export class BootScene extends Phaser.Scene {
     this.time.delayedCall(100, () => {
       this.scene.start('GameScene');
     });
+  }
+
+  // Progress bar while PNGs download: on a slow connection the map would otherwise stay blank.
+  showLoadingBar(): void {
+    const { width, height } = this.scale;
+    const w = Math.min(520, width * 0.4), h = 10, x = (width - w) / 2, y = height / 2;
+    const label = this.add.text(width / 2, y - 28, 'LOADING', { fontFamily: '"Minecraft", monospace', fontSize: '22px', color: '#1d3b12' }).setOrigin(0.5);
+    const frame = this.add.graphics().lineStyle(2, 0x1d3b12, 1).strokeRect(x - 3, y - 3, w + 6, h + 6);
+    const bar = this.add.graphics();
+    this.load.on('progress', (v: number) => { bar.clear().fillStyle(0x1d3b12, 1).fillRect(x, y, w * v, h); });
+    this.load.once('complete', () => { label.destroy(); frame.destroy(); bar.destroy(); });
   }
 
   scaleTexture(srcKey: string, destKey: string, w: number, h: number): void {
